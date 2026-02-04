@@ -1,0 +1,250 @@
+services:
+  # --- KAFKA ---
+  kafka-controller:
+    image: apache/kafka:latest
+    container_name: kafka-controller
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller
+      KAFKA_LISTENERS: CONTROLLER://0.0.0.0:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-controller:9093
+      CLUSTER_ID: 'my-cluster-id-12345678'
+
+  kafka-broker-1:
+    image: apache/kafka:latest
+    container_name: kafka-broker-1
+    ports:
+      - "9094:9094"
+    environment:
+      CLUSTER_ID: 'my-cluster-id-12345678'
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-1:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-controller:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - kafka-controller
+
+  kafka-broker-2:
+    image: apache/kafka:latest
+    container_name: kafka-broker-2
+    ports:
+      - "9095:9095"
+    environment:
+      CLUSTER_ID: 'my-cluster-id-12345678'
+      KAFKA_NODE_ID: 3
+      KAFKA_PROCESS_ROLES: broker
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9095
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-2:9092,EXTERNAL://localhost:9095
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-controller:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - kafka-controller
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "7070:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-broker-1:9092,kafka-broker-2:9092
+    depends_on:
+      - kafka-broker-1
+      - kafka-broker-2
+
+  # --- OBSERVABILITY ---
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    user: root
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        echo "
+        server:
+          http_listen_port: 9080
+          grpc_listen_port: 0
+        positions:
+          filename: /tmp/positions.yaml
+        clients:
+          - url: http://loki:3100/loki/api/v1/push
+        scrape_configs:
+          - job_name: docker
+            docker_sd_configs:
+              - host: unix:///var/run/docker.sock
+                refresh_interval: 5s
+            relabel_configs:
+              - source_labels: ['__meta_docker_container_name']
+                regex: '/(.*)'
+                target_label: 'container'
+        " > /etc/promtail/config.yml && /usr/bin/promtail -config.file=/etc/promtail/config.yml
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - loki
+
+  # --- DATABASES ---
+  db-auth:
+    image: postgres:15-alpine
+    container_name: AuthServiceDB
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cisco
+      POSTGRES_DB: auth_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth_data:/var/lib/postgresql/data
+
+  db-user:
+    image: postgres:15-alpine
+    container_name: UserServiceDB
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cisco
+      POSTGRES_DB: user_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - user_data:/var/lib/postgresql/data
+
+  db-order:
+    image: postgres:15-alpine
+    container_name: OrderServiceDB
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cisco
+      POSTGRES_DB: order_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - order_data:/var/lib/postgresql/data
+
+  db-product:
+    image: postgres:15-alpine
+    container_name: ProductServiceDB
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cisco
+      POSTGRES_DB: product_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - product_data:/var/lib/postgresql/data
+
+  # --- MICROSERVICES ---
+  eureka-server:
+    image: jeduardo001/eureka-server:v1
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+
+  gateway-service:
+    image: jeduardo001/gateway_service:v1
+    container_name: gateway-ms
+    ports:
+      - "8080:8080"
+    environment:
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-ds_4321_secf32_s112r_s06uSrd_df_Bn_c793c4t3vb4s}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - eureka-server
+
+  auth-service:
+    image: jeduardo001/auth_service:v1
+    container_name: auth-ms
+    ports:
+      - "5010:5010"
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka-broker-1:9092
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-secreto_de_emergencia_123}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db-auth:5432/auth_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=cisco
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - db-auth
+      - eureka-server
+      - kafka-broker-1
+
+  user-service:
+    image: jeduardo001/user_service:v1
+    container_name: user-ms
+    ports:
+      - "5011:5011"
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka-broker-1:9092
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db-user:5432/user_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=cisco
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - db-user
+      - eureka-server
+      - kafka-broker-1
+
+  order-service:
+    image: jeduardo001/order_service:v1
+    container_name: order-ms
+    ports:
+      - "5012:5012"
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka-broker-1:9092
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db-order:5432/order_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=cisco
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - db-order
+      - eureka-server
+      - kafka-broker-1
+
+  product-service:
+    image: jeduardo001/product_service:v1
+    container_name: product-ms
+    ports:
+      - "5013:5013"
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka-broker-1:9092
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db-product:5432/product_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=cisco
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    depends_on:
+      - db-product
+      - eureka-server
+      - kafka-broker-1
+
+volumes:
+  auth_data:
+  user_data:
+  order_data:
+  product_data:
