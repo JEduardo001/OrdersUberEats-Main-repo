@@ -10,15 +10,15 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-controller:9093
-      CLUSTER_ID: 'my-cluster-id-12345678'
+      CLUSTER_ID: '13-SCD9912D-4461234567'
 
   kafka-broker-1:
     image: apache/kafka:latest
     container_name: kafka-broker-1
     ports:
       - "9094:9094"
-    environment:
-      CLUSTER_ID: 'my-cluster-id-12345678'
+    environment:   
+      CLUSTER_ID: '13-SCD9912D-4461234567'
       KAFKA_NODE_ID: 2
       KAFKA_PROCESS_ROLES: broker
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9094
@@ -37,7 +37,7 @@ services:
     ports:
       - "9095:9095"
     environment:
-      CLUSTER_ID: 'my-cluster-id-12345678'
+      CLUSTER_ID: '13-SCD9912D-4461234567'
       KAFKA_NODE_ID: 3
       KAFKA_PROCESS_ROLES: broker
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9095
