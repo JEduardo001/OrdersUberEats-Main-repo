@@ -21,11 +21,21 @@ El sistema se compone de microservicios independientes que se comunican de forma
 El proyecto está totalmente dockerizado para facilitar su despliegue local.
 
 ### Requisitos Previos
-* **Java 21**
 * **Docker & Docker Compose**
-* Variable de entorno **JWT_SECRET_KEY** configurada.
 
-### Ejecución
+### Ejecución del proyecto
+
+* *Descargar el archivo docker-compoe.yaml
+* *Descargar el archivo .env.example
+
+  En el archivo .env.example debes cambiar el nombre a  .env
+  o crear un nuevo archivo llamado .env y copiar el contenido del original al nuevo.
+
+  Nota 1: La clave JWT en el archivo es un ejemplo y puede usarse para correr el proyecto.
+  Nota 2: Tanto el archivo docker-compose.yaml y .env deben estar en el mismo directorio.
+
+ * *Ejecutar el siguiente comando en la ubicacion del archivo docker-compose.yaml: 
+
 ```bash
 docker-compose up -d
 ```
