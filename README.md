@@ -70,6 +70,28 @@ Auth Service: http://localhost:5010/swagger-ui/index.html
 
 ---
 
+##Repositorios de microservicios
+
+* *Auth microservice
+  https://github.com/JEduardo001/OrdersUberEats-authService
+
+* *Product microservice
+  https://github.com/JEduardo001/OrdersUberEat-ProductService
+
+* *Order microservice
+  https://github.com/JEduardo001/OrdersUberEats-orderService
+
+* *User microservice
+  https://github.com/JEduardo001/OrdersUberEats-userServie
+
+* *Eureka seriver
+  https://github.com/JEduardo001/OrdersUberEats-eurekaServer
+
+* *Gateway service
+  https://github.com/JEduardo001/ordersUberEats-gatewayService
+
+---
+
 SERVICIOS
 
 | Servicio | Puerto Externo | Base de Datos |
