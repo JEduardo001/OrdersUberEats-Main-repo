@@ -40,6 +40,36 @@ El proyecto está totalmente dockerizado para facilitar su despliegue local.
 docker-compose up -d
 ```
 
+* *Se descargaran las imagenes y correran los contenedores automaticamente. (Se cargaran productos y roles automaticamente)
+  
+Después esperar 30 segundos a que los servicios arranquen.
+
+* *Para conocer las rutas, puedes consultar la documentacion de swagger-ui mas abajo se muestran las direcciones.
+
+---
+
+La ruta base para cualquier peticion es: http://localhost:8080/
+
+Dashboard Eureka: http://localhost:8761
+
+Gateway: http://localhost:8080
+
+Kafka UI: http://localhost:7070
+
+Grafana (Logs): http://localhost:3000 (User: admin / Pass: admin)
+
+* *Documentación API (Swagger):
+
+Order Service: http://localhost:5012/swagger-ui/index.html
+
+Product Service: http://localhost:5013/swagger-ui/index.html
+
+User Service: http://localhost:5011/swagger-ui/index.html
+
+Auth Service: http://localhost:5010/swagger-ui/index.html
+
+---
+
 SERVICIOS
 
 | Servicio | Puerto Externo | Base de Datos |
